@@ -42,7 +42,7 @@ from geometry_msgs.msg import Vector3Stamped, QuaternionStamped
 from std_msgs.msg import Float32
 import vmu931_driver as vmu
 import dato
-from vmu931_imu.msg import State as VmuState
+from vmu931_msgs.msg import State as VmuState
 import math
 from std_srvs.srv import Trigger
 

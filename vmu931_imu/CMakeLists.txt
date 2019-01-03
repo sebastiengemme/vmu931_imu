@@ -13,7 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   genmsg
-  robotnik_msgs
+  vmu931_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -24,20 +24,6 @@ find_package(catkin REQUIRED COMPONENTS
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
 catkin_python_setup()
-
-
-## Generate messages in the 'msg' folder
-add_message_files(
-   FILES
-   State.msg
-)
-
-## Generate added messages and services with any dependencies listed here
-generate_messages(
-   DEPENDENCIES
-   std_msgs
-   robotnik_msgs
-)
 
 
 catkin_package(

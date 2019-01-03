@@ -30,7 +30,7 @@
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>message_runtime</exec_depend>
-  <depend>robotnik_msgs</depend>
+  <depend>vmu931_msgs</depend>
   <depend>genmsg</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
