@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-import vmu931_driver as vmu
-import dato
+import .vmu931_driver as vmu
+import .dato
 
 def printValue (val):
 	print("setTimestam = {} w = {} x = {} y = {} z = {} heading ={} msg ={}".format(val.timestamp, val.w, val.x, val.y, val.z, val.heading, val.msg))

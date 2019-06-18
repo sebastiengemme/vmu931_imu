@@ -41,8 +41,8 @@ from robotnik_msgs.msg import State
 from sensor_msgs.msg import Imu
 from geometry_msgs.msg import Vector3Stamped, QuaternionStamped
 from std_msgs.msg import Float32
-import vmu931_driver as vmu
-import dato
+from . import vmu931_driver as vmu
+from . import dato
 from vmu931_msgs.msg import VMUState as VmuState
 import math
 from std_srvs.srv import Trigger
@@ -336,11 +336,7 @@ class Vmu931Node(Node):
             t_sleep = self.time_sleep - tdiff
             
             if t_sleep > 0.0:
-                try:
-                    time.sleep(t_sleep)
-                except rospy.exceptions.ROSInterruptException:
-                    self.get_logger().info('%s::controlLoop: ROS interrupt exception'%self.node_name)
-                    self.running = False
+                time.sleep(t_sleep)
             
             t3= time.time()
             self.real_freq = 1.0/(t3 - t1)
@@ -669,10 +665,7 @@ def main():
 
     rclpy.init()
 
-    _name = rospy.name.replace('/','')
-    
     arg_defaults = {
-          'node': node,
       'topic_state': 'state',
       'desired_freq': DEFAULT_FREQ,
       'port': '/dev/ttyACM0',
@@ -695,8 +688,8 @@ def main():
             else:
                 args[name] = arg_defaults[name]
             #print name
-        except rospy.ROSException as e:
-            self.get_logger().err('%s: %s'%(e, _name))
+        except Exception as e:
+            rclpy.logging.get_logger().err('%s: %s'%(e, _name))
             
     
     rc_node = Vmu931Node(args)

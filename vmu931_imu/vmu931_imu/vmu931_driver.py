@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import dato
+from . import dato
 import serial
 from time import sleep
 import sys

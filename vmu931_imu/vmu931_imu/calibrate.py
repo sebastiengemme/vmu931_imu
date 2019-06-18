@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import vmu931_driver as vmu
+import .vmu931_driver as vmu
 import dato
 
 def printValue (val):
