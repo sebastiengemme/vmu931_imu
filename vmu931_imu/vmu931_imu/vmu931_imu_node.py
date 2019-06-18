@@ -43,7 +43,7 @@ from geometry_msgs.msg import Vector3Stamped, QuaternionStamped
 from std_msgs.msg import Float32
 import vmu931_driver as vmu
 import dato
-from vmu931_msgs.msg import State as VmuState
+from vmu931_msgs.msg import VMUState as VmuState
 import math
 from std_srvs.srv import Trigger
 
@@ -89,7 +89,7 @@ class Vmu931Node(Node):
             self._stream_heading = False
         else:
             if self._mode != VMU931_MODE_CUSTOM:
-                self.get_logger()warn('%s::init: unknown mode %s. Setting %s mode', self.node_name, self._mode, VMU931_MODE_CUSTOM)
+                self.get_logger().warn('%s::init: unknown mode %s. Setting %s mode', self.node_name, self._mode, VMU931_MODE_CUSTOM)
                 self._mode = VMU931_MODE_CUSTOM
             self._stream_gyro = args['gyroscope']
             self._stream_magnetometer = args['magnetometer']
@@ -119,7 +119,7 @@ class Vmu931Node(Node):
         self._calibration = False
         self._calibration_step = 0
         
-        self._emergency_recovery_timer = rospy.Time.now()
+        self._emergency_recovery_timer = self.get_clock().now()
         
         self._imu_dev = vmu.vmu931(self._port, baudrate = 9600)
         
@@ -387,7 +387,8 @@ class Vmu931Node(Node):
                 self.get_logger().info('%s::standbyState: calibrating', self.node_name)
                 self._imu_dev.calibrate()
                 self._calibration_step+=1
-                self._expected_calibration_response = rospy.Time.now() + rospy.Duration.from_sec(VMU931_CALIBRATION_DURATION)
+                self._expected_calibration_response = self.get_clock().now() + rclpy.duration.Duration(VMU931_CALIBRATION_DURATION)
+
                 '''
                 cont = 0
                 while (not self.value["Text"].update):
@@ -414,7 +415,7 @@ class Vmu931Node(Node):
                         self.switchToState(State.READY_STATE)
                     else:
                         self._calibration_step = 0
-                elif rospy.Time.now() > self._expected_calibration_response:
+                elif self.get_clock().now() > self._expected_calibration_response:
                         self._calibration_step = 0
                         
             elif self._calibration_step == 2:
@@ -425,7 +426,7 @@ class Vmu931Node(Node):
                         self.switchToState(State.READY_STATE)
                     else:
                         self._calibration_step = 0
-                elif rospy.Time.now() > self._expected_calibration_response:
+                elif self.get_clock().now() > self._expected_calibration_response:
                         self._calibration_step = 0
         else:
             self.switchToState(State.READY_STATE)
@@ -451,7 +452,7 @@ class Vmu931Node(Node):
             mag = self._imu_dev.value["Magnetometers"]
             head = self._imu_dev.value["Heading"]
             
-            current_time = rospy.Time.now()
+            current_time = self.get_clock().now()
             
             if msg == vmu.GYROSCOPES:
                 self._gyro_msg.header.stamp = current_time
@@ -530,7 +531,7 @@ class Vmu931Node(Node):
         '''
             Actions performed in emergency state
         '''
-        if (rospy.Time.now() - self._emergency_recovery_timer).to_sec() >= 5.0:
+        if (self.get_clock().now() - self._emergency_recovery_timer).to_sec() >= 5.0:
             self.get_logger().warn('%s::emergencyState: closing and reopenning device',self.node_name)
             self._imu_dev.close()
             
@@ -538,7 +539,7 @@ class Vmu931Node(Node):
                 self.initialized = False
                 self.switchToState(State.INIT_STATE)
             else:
-                self._emergency_recovery_timer = rospy.Time.now()
+                self._emergency_recovery_timer = self.get_clock().now()
 
         return
     
@@ -642,7 +643,7 @@ class Vmu931Node(Node):
         self.get_logger().info('Vmu931Node:topicCb')
    """    
     
-    def calibrationServiceCb(self, req, res):
+    async def calibrationServiceCb(self, req, res):
         '''
             ROS service server
             @param req: Required action
@@ -657,13 +658,16 @@ class Vmu931Node(Node):
         
         self._calibration = True        
         self.get_logger().info('%s::calibrationServiceCb', self.node_name)    
+
+        res.success = True
+        res.message = 'ok'
         
-        return True,'ok'
+        return res
     
         
 def main():
 
-        rclpy.init()
+    rclpy.init()
 
     _name = rospy.name.replace('/','')
     
@@ -691,7 +695,7 @@ def main():
             else:
                 args[name] = arg_defaults[name]
             #print name
-        except rospy.ROSException, e:
+        except rospy.ROSException as e:
             self.get_logger().err('%s: %s'%(e, _name))
             
     

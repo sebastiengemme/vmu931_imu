@@ -1,10 +1,13 @@
-from distutils.core import setup
-from catkin_pkg.python_setup import generate_distutils_setup
+from setuptools import setup
 
 # fetch values from package.xml
-setup_args = generate_distutils_setup(
-    packages=['vmu931_imu'],
-    package_dir={'': 'src'},
+setup(name="vmu931_imu",
+    packages=["vmu931_imu"],
+    install_requires=["setuptools"],
+    zip_safe=True,
+    entry_points={
+        'console_scripts': [
+            'vmu931_imu_node = vmu931_imu.vmu931_imu_node:main',
+            ],
+    },
 )
-
-setup(**setup_args)
