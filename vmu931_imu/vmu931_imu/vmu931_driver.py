@@ -57,14 +57,14 @@ class vmu931():
                 self.serial_dev.open()
                 self.serial_dev.flushInput()
             except serial.serialutil.SerialException as e:
-                rclpy.logging.get_logger().err('vmu931:setup: %s', e)
+                rclpy.logging._root_logger.error('vmu931:setup: %s', e)
                 self.connected = False
                 return False
 
-        rclpy.logging.get_logger()(
-            'vmu931:setup: port %s:%d opened successfully',
+        rclpy.logging._root_logger.info(
+            'vmu931:setup: port %{0}:%{1} opened successfully'.format(
             self.serial_dev.port,
-            self.serial_dev.baudrate)
+            self.serial_dev.baudrate))
         self.connected = True
         return True
 
@@ -100,24 +100,23 @@ class vmu931():
                 return -2, ''
             buffer_input = self.serial_dev.read(input_bytes)
         except IOError as e:
-            rclpy.logging.get_logger().warn('vmu931_driver::readOneTime: %s', e)
+            rclpy.logging._root_logger.warn('vmu931_driver::readOneTime: %s'%e)
             return -5, ''
         dataTypeMessage = False
-        if (ord(buffer_input[0]) == 2 and ord(
-                buffer_input[len(buffer_input) - 1]) == 3):  # string message
+        if (buffer_input[0] == 2 and buffer_input[len(buffer_input) - 1] == 3):  # string message
             dataTypeMessage = False
         # data message
-        elif (ord(buffer_input[0]) == 1 and ord(buffer_input[len(buffer_input) - 1]) == 4):
+        elif (buffer_input[0] == 1 and buffer_input[len(buffer_input) - 1] == 4):
             dataTypeMessage = True
         else:
-            rclpy.logging.get_logger().warn('vmu931_driver::readOneTime: unknown data type')
+            rclpy.logging._root_logger.warn('vmu931_driver::readOneTime: unknown data type')
             '''sizeMessage = ord(buffer_input[1])-4
 			typeMessage = buffer_input[2]
 			dataMessage = buffer_input[3:3+sizeMessage]
 			rospy.logwarn('vmu931_driver::readOneTime: msg =(%s) %s', type(dataMessage),dataMessage)'''
             return -3, ''
-        sizeMessage = ord(buffer_input[1]) - 4
-        typeMessage = buffer_input[2]
+        sizeMessage = buffer_input[1] - 4
+        typeMessage = chr(buffer_input[2])
         dataMessage = buffer_input[3:3 + sizeMessage]
         if (dataTypeMessage):
             if (typeMessage == ACCELEROMETERS):
@@ -169,13 +168,13 @@ class vmu931():
                 self.status.outputRate(dataMessage[2])
                 self.status.streaming(dataMessage[3:7])
             else:
-                rclpy.logging.get_logger().err(
-                    "vmu931_driver::readOneTime: unknown type %s received!",
+                rclpy.logging._root_logger.error(
+                    "vmu931_driver::readOneTime: unknown type %s received!"%
                     typeMessage)
                 return -4, ''
             return 0, typeMessage
         else:
-            rclpy.logging.get_logger().info(
+            rclpy.logging._root_logger.info(
                 "vmu931_driver::readOneTime: Text from device: {}".format(dataMessage))
             self.value["Text"].setMsg(dataMessage)
             return 0, ''
@@ -227,7 +226,7 @@ class vmu931():
                 try:
                     self.serial_dev.write(byte_message)
                 except serial.SerialException as e:
-                    rclpy.logging.get_logger().err('vmu931_driver::sendCommand: %s', e)
+                    rclpy.logging._root_loger.error('vmu931_driver::sendCommand: %s', e)
                     return False
 
             elif (mod == "var" + CALIBRATION):
@@ -236,7 +235,7 @@ class vmu931():
                     self.serial_dev.flushInput()
                     self.serial_dev.write(byte_message)
                 except serial.SerialException as e:
-                    rclpy.logging.get_logger().err('vmu931_driver::sendCommand: %s', e)
+                    rclpy.logging._root_logger.error('vmu931_driver::sendCommand: %s', e)
                     return False
 
             elif (mod == "var" + SELF_TEST):
@@ -262,7 +261,7 @@ class vmu931():
                 try:
                     self.serial_dev.write(byte_message)
                 except serial.SerialException as e:
-                    rclpy.logging.get_logger().err('vmu931_driver::sendCommand: %s', e)
+                    rclpy.logging._root_logger.error('vmu931_driver::sendCommand: %s', e)
                     return False
 
         sleep(0.02)

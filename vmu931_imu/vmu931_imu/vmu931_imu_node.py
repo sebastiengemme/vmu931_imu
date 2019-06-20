@@ -34,6 +34,7 @@
 
 import rclpy
 from rclpy.node import Node
+from rclpy.time import Time
 
 import time, threading
 
@@ -58,15 +59,20 @@ VMU931_CALIBRATION_DURATION = 5.0
 # Class Template of Robotnik component for Pyhton
 class Vmu931Node(Node):
     
-    def __init__(self, args):
+    def __init__(self):
         
-        self.node_name = self.name #.replace('/','')
+        super().__init__('vmu931_imu')
+
+        self.node_name = self.get_name() #.replace('/','')
+
+        args = self.__initParameters()
+
         self.desired_freq = args['desired_freq'] 
         # Checks value of freq
         if self.desired_freq <= 0.0 or self.desired_freq > MAX_FREQ:
             self.get_logger().info('%s::init: Desired freq (%f) is not possible. Setting desired_freq to %f'%(self.node_name,self.desired_freq, DEFAULT_FREQ))
             self.desired_freq = DEFAULT_FREQ
-    
+   
     
         self.real_freq = 0.0
         # configuration driver to imu
@@ -89,7 +95,7 @@ class Vmu931Node(Node):
             self._stream_heading = False
         else:
             if self._mode != VMU931_MODE_CUSTOM:
-                self.get_logger().warn('%s::init: unknown mode %s. Setting %s mode', self.node_name, self._mode, VMU931_MODE_CUSTOM)
+                self.get_logger().warn('{0}::init: unknown mode {1}. Setting {2} mode'.format(self.node_name, self._mode, VMU931_MODE_CUSTOM))
                 self._mode = VMU931_MODE_CUSTOM
             self._stream_gyro = args['gyroscope']
             self._stream_magnetometer = args['magnetometer']
@@ -146,7 +152,7 @@ class Vmu931Node(Node):
         self._quaternion_msg.header.frame_id = self._frame_id
         
         self._heading_msg = Vector3Stamped()
-        self._heading_msg.vector.x = self._heading_msg.vector.y = 0
+        self._heading_msg.vector.x = self._heading_msg.vector.y = 0.0
         self._heading_msg.header.frame_id = self._frame_id
             
     def setup(self):
@@ -162,21 +168,23 @@ class Vmu931Node(Node):
         trials = 0
         max_trials = 1000
         
-        self.get_logger().info('%s::setup: reading sensor status', self.node_name)
+        self.get_logger().info('{0}::setup: reading sensor status'.format(self.node_name))
         while msg!=vmu.STATUS and trials<=max_trials and not rclpy.try_shutdown():
-            #print 'trial %d'%trials
+            print('trial %d'%trials)
             self._imu_dev.readStatus()
             #rospy.sleep(0.1)
             ret,msg = self._imu_dev.readOneTime()
             trials+=1
+        print("done")
             
         if msg != vmu.STATUS:
-            self.get_logger().err('%s::setup: error reading sensor status', self.node_name)
+            self.get_logger().err('{0}::setup: error reading sensor status'.format(self.node_name))
             return -1
         
-        #self._imu_dev.printStatus()
+        print("ok")
+        self._imu_dev.printStatus()
         
-        self.get_logger().info('%s::setup: configuring sensor streaming', self.node_name)
+        self.get_logger().info('{0}::setup: configuring sensor streaming'.format(self.node_name))
         
         self._imu_dev.streamingAccelerometers(self._stream_accelerometer)
         self._imu_dev.streamingGyroscopes(self._stream_gyro)
@@ -187,7 +195,7 @@ class Vmu931Node(Node):
         
         msg = ''
         trials = 0
-        self.get_logger().info('%s::setup: reading sensor status to confirm streaming', self.node_name)
+        self.get_logger().info('{0}::setup: reading sensor status to confirm streaming'.format(self.node_name))
         while msg!=vmu.STATUS and trials<=max_trials and not rclpy.try_shutdown():
             self._imu_dev.readStatus()
             #rospy.sleep(0.1)
@@ -212,17 +220,17 @@ class Vmu931Node(Node):
             return 0
         
         # Publishers
-        self._state_publisher = self.create_publisher(VmuState, "~state", 10)
-        self._imu_publisher = self.create_publisher(Imu, '~data_raw', 10)
-        self._gyro_publisher = self.create_publisher(Vector3Stamped, '~gyro', 10)
-        self._euler_publisher = self.create_publisher(Vector3Stamped, '~euler', 10)
-        self._accel_publisher = self.create_publisher(Vector3Stamped, '~accelerometer', 10)
-        self._magnet_publisher = self.create_publisher(Vector3Stamed, '~magnetometer', 10)
-        self._quaternion_publisher = self.create_publisher(QuaternionStamped, '~quaternion', 10)
-        self._heading_publisher = self.create_publisher(Vector3Stamped, '~heading', 10)
+#        self._state_publisher = self.create_publisher(VmuState, "~state", 10)
+        self._imu_publisher = self.create_publisher(Imu, 'data_raw', 10)
+        self._gyro_publisher = self.create_publisher(Vector3Stamped, 'gyro', 10)
+        self._euler_publisher = self.create_publisher(Vector3Stamped, 'euler', 10)
+        self._accel_publisher = self.create_publisher(Vector3Stamped, 'accelerometer', 10)
+        self._magnet_publisher = self.create_publisher(Vector3Stamped, 'magnetometer', 10)
+        self._quaternion_publisher = self.create_publisher(QuaternionStamped, 'quaternion', 10)
+        self._heading_publisher = self.create_publisher(Vector3Stamped, 'heading', 10)
 
         # Service Servers
-        self.service_server = self.create_service(Trigger, '~calibrate', self.calibrationServiceCb)
+        self.service_server = self.create_service(Trigger, 'calibrate', self.calibrationServiceCb)
         
         # Subscribers
         # topic_name, msg type, callback, queue_size
@@ -288,6 +296,8 @@ class Vmu931Node(Node):
             Runs ROS configuration and the main control loop
             @return: 0 if OK
         '''
+        self.get_logger().info('%s: starting'%(self.get_name()))
+
         self.rosSetup()
         
         if self.running:
@@ -380,7 +390,7 @@ class Vmu931Node(Node):
         '''
         if self._calibration:
             if self._calibration_step == 0:
-                self.get_logger().info('%s::standbyState: calibrating', self.node_name)
+                self.get_logger().info('%s::standbyState: calibrating'%self.node_name)
                 self._imu_dev.calibrate()
                 self._calibration_step+=1
                 self._expected_calibration_response = self.get_clock().now() + rclpy.duration.Duration(VMU931_CALIBRATION_DURATION)
@@ -448,7 +458,8 @@ class Vmu931Node(Node):
             mag = self._imu_dev.value["Magnetometers"]
             head = self._imu_dev.value["Heading"]
             
-            current_time = self.get_clock().now()
+            current_time = Time.to_msg(self.get_clock().now())
+            print("current_time: " + repr(current_time))
             
             if msg == vmu.GYROSCOPES:
                 self._gyro_msg.header.stamp = current_time
@@ -489,6 +500,7 @@ class Vmu931Node(Node):
                 self._quaternion_msg.quaternion.y = quat.y
                 self._quaternion_msg.quaternion.z = quat.z
                 self._quaternion_msg.quaternion.w = quat.w
+                self.get_logger().info("Publishing quaternion")
                 self._quaternion_publisher.publish(self._quaternion_msg)
             
                 self._imu_msg.header.stamp = current_time
@@ -528,7 +540,7 @@ class Vmu931Node(Node):
             Actions performed in emergency state
         '''
         if (self.get_clock().now() - self._emergency_recovery_timer).to_sec() >= 5.0:
-            self.get_logger().warn('%s::emergencyState: closing and reopenning device',self.node_name)
+            self.get_logger().warn('{0}::emergencyState: closing and reopenning device'.format(self.node_name))
             self._imu_dev.close()
             
             if self._imu_dev.setup():
@@ -605,7 +617,7 @@ class Vmu931Node(Node):
         '''
             Publish the State of the component at the desired frequency
         '''
-        if not rospy.is_shutdown():
+        if not rclpy.try_shutdown():
             self.msg_state.state.state = self.state
             self.msg_state.state.state_description = self.stateToString(self.state)
             self.msg_state.state.desired_freq = self.desired_freq
@@ -623,7 +635,7 @@ class Vmu931Node(Node):
             self.msg_state.accel_streaming = self._imu_dev.status.streamingAcc
             self.msg_state.calibrating = self._calibration
                         
-            self._state_publisher.publish(self.msg_state)
+            # self._state_publisher.publish(self.msg_state)
             
             self.t_publish_state = threading.Timer(self.publish_state_timer, self.publishROSstate)
             self.t_publish_state.start()
@@ -653,49 +665,49 @@ class Vmu931Node(Node):
             self._calibration_step = 0
         
         self._calibration = True        
-        self.get_logger().info('%s::calibrationServiceCb', self.node_name)    
+        self.get_logger().info('%s::calibrationServiceCb'%self.node_name)    
 
         res.success = True
         res.message = 'ok'
         
         return res
-    
+
+    def __initParameters(self) -> dict:
+
+        arg_defaults = {
+          'topic_state': 'state',
+          'desired_freq': DEFAULT_FREQ,
+          'port': '/dev/ttyACM0',
+          'frame_id': 'imu_link',
+          'mode': VMU931_MODE_QUATERNION,
+          'gyroscope': False,
+          'magnetometer': False,
+          'accelerometer': False,
+          'quaternion': True,
+          'euler': True,
+          'heading': True,
+        }
+        
+        args = {}
+        
+        for name in arg_defaults:
+            try:
+                if self.has_parameter(name): 
+                    args[name] = self.get_parameter('~%s'%(name)) # Adding the name of the node, because the para has the namespace of the node
+                else:
+                    args[name] = arg_defaults[name]
+                #print name
+            except Exception as e:
+                rclpy.logging._root_logger.error('%s: %s'%(e, name))
+
+        return args
         
 def main():
 
     rclpy.init()
-
-    arg_defaults = {
-      'topic_state': 'state',
-      'desired_freq': DEFAULT_FREQ,
-      'port': '/dev/ttyACM0',
-      'frame_id': 'imu_link',
-      'mode': VMU931_MODE_QUATERNION,
-      'gyroscope': False,
-      'magnetometer': False,
-      'accelerometer': False,
-      'quaternion': True,
-      'euler': True,
-      'heading': True,
-    }
     
-    args = {}
+    rc_node = Vmu931Node()
     
-    for name in arg_defaults:
-        try:
-            if rospy.search_param(name): 
-                args[name] = rospy.get_param('~%s'%(name)) # Adding the name of the node, because the para has the namespace of the node
-            else:
-                args[name] = arg_defaults[name]
-            #print name
-        except Exception as e:
-            rclpy.logging.get_logger().err('%s: %s'%(e, _name))
-            
-    
-    rc_node = Vmu931Node(args)
-    
-    self.get_logger().info('%s: starting'%(_name))
-
     rc_node.start()
 
 

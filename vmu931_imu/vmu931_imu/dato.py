@@ -63,14 +63,14 @@ class Status():
 		self.update = False
 	
 	def sensorStatus (self, byte):
-		value = ord(byte)
+		value = byte
 		self.accStatus = ((value & 1)!= 0)
 		self.gyroStatus = ((value & 2)!= 0)
 		self.magStatus = ((value&4)!=0)
 		self.update = True
 		
 	def sensorResolution (self, byte):
-		value = ord(byte)
+		value = byte
 		if (value&1)!=0:
 			self.accResolution = 2
 		elif(value&2)!=0:
@@ -95,7 +95,7 @@ class Status():
 		self.update = True
 	
 	def outputRate (self, byte):
-		value = ord(byte)
+		value = byte
 		if (value&1)!=0:
 			self.ouptputRate = 200
 		else:
