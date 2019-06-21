@@ -48,12 +48,12 @@ from vmu931_msgs.msg import VMUState as VmuState
 import math
 from std_srvs.srv import Trigger
 
-DEFAULT_FREQ = 200.0
-MAX_FREQ = 1000.0
+DEFAULT_FREQ = float(200.0)
+MAX_FREQ = float(1000.0)
 VMU931_MODE_QUATERNION = 'quaternion-euler-heading'
 VMU931_MODE_GYROSCOPE = 'gyro-accel-mag'
 VMU931_MODE_CUSTOM = 'custom'
-VMU931_CALIBRATION_DURATION = 5.0
+VMU931_CALIBRATION_DURATION = float(5.0)
 
 
 # Class Template of Robotnik component for Pyhton
@@ -129,7 +129,7 @@ class Vmu931Node(Node):
         
         self._imu_dev = vmu.vmu931(self._port, baudrate = 9600)
         
-        self.t_publish_state = threading.Timer(self.publish_state_timer, self.publishROSstate)
+#        self.t_publish_state = threading.Timer(self.publish_state_timer, self.publishROSstate)
         self._imu_msg = Imu()
         self._imu_msg.header.frame_id = self._frame_id
         self._imu_msg.orientation_covariance = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
@@ -154,7 +154,7 @@ class Vmu931Node(Node):
         self._heading_msg = Vector3Stamped()
         self._heading_msg.vector.x = self._heading_msg.vector.y = 0.0
         self._heading_msg.header.frame_id = self._frame_id
-            
+
     def setup(self):
         '''
             Initializes de hand
@@ -169,7 +169,7 @@ class Vmu931Node(Node):
         max_trials = 1000
         
         self.get_logger().info('{0}::setup: reading sensor status'.format(self.node_name))
-        while msg!=vmu.STATUS and trials<=max_trials and not rclpy.try_shutdown():
+        while msg!=vmu.STATUS and trials<=max_trials:
             print('trial %d'%trials)
             self._imu_dev.readStatus()
             #rospy.sleep(0.1)
@@ -181,7 +181,7 @@ class Vmu931Node(Node):
             self.get_logger().err('{0}::setup: error reading sensor status'.format(self.node_name))
             return -1
         
-        print("ok")
+        self.get_logger().info("IMU Dev Status")
         self._imu_dev.printStatus()
         
         self.get_logger().info('{0}::setup: configuring sensor streaming'.format(self.node_name))
@@ -196,7 +196,7 @@ class Vmu931Node(Node):
         msg = ''
         trials = 0
         self.get_logger().info('{0}::setup: reading sensor status to confirm streaming'.format(self.node_name))
-        while msg!=vmu.STATUS and trials<=max_trials and not rclpy.try_shutdown():
+        while msg!=vmu.STATUS and trials<=max_trials:
             self._imu_dev.readStatus()
             #rospy.sleep(0.1)
             ret,msg = self._imu_dev.readOneTime()
@@ -206,6 +206,8 @@ class Vmu931Node(Node):
         
         self.desired_freq = self._imu_dev.status.ouptputRate
         self.time_sleep = 1.0 / self.desired_freq
+
+        self.get_logger().info("Desired freq: {0:.3f}".format(1.0/self.time_sleep))
             
         self.initialized = True
         
@@ -242,7 +244,7 @@ class Vmu931Node(Node):
         
         self.ros_initialized = True
         
-        self.publishROSstate()
+#        self.publishROSstate()
         
         return 0
         
@@ -304,19 +306,36 @@ class Vmu931Node(Node):
             return 0
             
         self.running = True
+
+        self.__controlLoop = self.create_timer(0.1,self.controlLoop)
         
-        self.controlLoop()
+#        self.controlLoop()
         
         return 0
     
+    def dummyControlLoop(self):
+
+        self.__controlLoop.cancel()
+
+        while self.running:
+
+            if self.state == State.INIT_STATE:
+                self.initState()
+            else:
+                self._quaternion_publisher.publish(QuaternionStamped())
+
+            time.sleep(0.1)
+            
     
     def controlLoop(self):
         '''
             Main loop of the component
             Manages actions by state
         '''
+
+        self.__controlLoop.cancel()
         
-        while self.running and not rclpy.try_shutdown():
+        while self.running:
             t1 = time.time()
             
             if self.state == State.INIT_STATE:
@@ -350,7 +369,7 @@ class Vmu931Node(Node):
             
             t3= time.time()
             self.real_freq = 1.0/(t3 - t1)
-        
+
         self.running = False
         # Performs component shutdown
         self.shutdownState()
@@ -379,10 +398,6 @@ class Vmu931Node(Node):
             
         else:         
             self.switchToState(State.STANDBY_STATE)
-        
-        
-        return
-    
     
     def standbyState(self):
         '''
@@ -459,7 +474,6 @@ class Vmu931Node(Node):
             head = self._imu_dev.value["Heading"]
             
             current_time = Time.to_msg(self.get_clock().now())
-            print("current_time: " + repr(current_time))
             
             if msg == vmu.GYROSCOPES:
                 self._gyro_msg.header.stamp = current_time
@@ -500,18 +514,17 @@ class Vmu931Node(Node):
                 self._quaternion_msg.quaternion.y = quat.y
                 self._quaternion_msg.quaternion.z = quat.z
                 self._quaternion_msg.quaternion.w = quat.w
-                self.get_logger().info("Publishing quaternion")
                 self._quaternion_publisher.publish(self._quaternion_msg)
             
                 self._imu_msg.header.stamp = current_time
                 #print dir(self._imu_msg.angular_velocity) 
-                self._imu_msg.angular_velocity.x = 0
-                self._imu_msg.angular_velocity.y = 0
-                self._imu_msg.angular_velocity.z = 0
+                self._imu_msg.angular_velocity.x = 0.0
+                self._imu_msg.angular_velocity.y = 0.0
+                self._imu_msg.angular_velocity.z = 0.0
                 
-                self._imu_msg.linear_acceleration.x = 0
-                self._imu_msg.linear_acceleration.y = 0
-                self._imu_msg.linear_acceleration.z = 0
+                self._imu_msg.linear_acceleration.x = 0.0
+                self._imu_msg.linear_acceleration.y = 0.0
+                self._imu_msg.linear_acceleration.z = 0.0
                 
                 self._imu_msg.orientation.x = quat.x
                 self._imu_msg.orientation.y = quat.y
@@ -617,29 +630,29 @@ class Vmu931Node(Node):
         '''
             Publish the State of the component at the desired frequency
         '''
-        if not rclpy.try_shutdown():
-            self.msg_state.state.state = self.state
-            self.msg_state.state.state_description = self.stateToString(self.state)
-            self.msg_state.state.desired_freq = self.desired_freq
-            self.msg_state.state.real_freq = self.real_freq
-            
-            self.msg_state.gyroscope_status = self._imu_dev.status.gyroStatus
-            self.msg_state.accelerometer_status = self._imu_dev.status.gyroStatus
-            self.msg_state.magnetometer_status = self._imu_dev.status.magStatus
-            self.msg_state.output_rate = self._imu_dev.status.ouptputRate
-            self.msg_state.heading_streaming = self._imu_dev.status.streamingHead
-            self.msg_state.euler_streaming = self._imu_dev.status.streamingEuler
-            self.msg_state.gyro_streaming = self._imu_dev.status.streamingGyro
-            self.msg_state.magnet_streaming = self._imu_dev.status.streamingMag
-            self.msg_state.quaternion_streaming = self._imu_dev.status.streamingQuart
-            self.msg_state.accel_streaming = self._imu_dev.status.streamingAcc
-            self.msg_state.calibrating = self._calibration
+        self.msg_state.state.state = self.state
+        self.msg_state.state.state_description = self.stateToString(self.state)
+        print("Desired freq is {0}".format(self.desired_freq))
+        self.msg_state.state.desired_freq = float(self.desired_freq)
+        self.msg_state.state.real_freq = float(self.real_freq)
+        
+        self.msg_state.gyroscope_status = self._imu_dev.status.gyroStatus
+        self.msg_state.accelerometer_status = self._imu_dev.status.gyroStatus
+        self.msg_state.magnetometer_status = self._imu_dev.status.magStatus
+        self.msg_state.output_rate = self._imu_dev.status.ouptputRate
+        self.msg_state.heading_streaming = self._imu_dev.status.streamingHead
+        self.msg_state.euler_streaming = self._imu_dev.status.streamingEuler
+        self.msg_state.gyro_streaming = self._imu_dev.status.streamingGyro
+        self.msg_state.magnet_streaming = self._imu_dev.status.streamingMag
+        self.msg_state.quaternion_streaming = self._imu_dev.status.streamingQuart
+        self.msg_state.accel_streaming = self._imu_dev.status.streamingAcc
+        self.msg_state.calibrating = self._calibration
                         
             # self._state_publisher.publish(self.msg_state)
             
-            self.t_publish_state = threading.Timer(self.publish_state_timer, self.publishROSstate)
-            self.t_publish_state.start()
-    
+        #    self.t_publish_state = threading.Timer(self.publish_state_timer, self.publishROSstate)
+        #    self.t_publish_state.start()
+
     """
     def topicCb(self, msg):
         '''
@@ -702,13 +715,17 @@ class Vmu931Node(Node):
 
         return args
         
-def main():
+def main(args=None):
 
-    rclpy.init()
+    rclpy.init(args=args)
     
     rc_node = Vmu931Node()
     
     rc_node.start()
+
+    rclpy.spin(rc_node)
+    rc_node.destroy_node()
+    rclpy.shutdown()
 
 
 if __name__ == "__main__":
