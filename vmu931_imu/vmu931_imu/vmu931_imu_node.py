@@ -38,7 +38,7 @@ from rclpy.time import Time
 
 import time, threading
 
-from robotnik_msgs.msg import State
+from diagnostic_msgs.msg import DiagnosticStatus, KeyValue
 from sensor_msgs.msg import Imu
 from geometry_msgs.msg import Vector3Stamped, QuaternionStamped
 from std_msgs.msg import Float32
