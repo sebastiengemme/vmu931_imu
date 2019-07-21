@@ -38,6 +38,7 @@ from rclpy.time import Time
 
 import time, threading
 
+from robotnik_msgs.msg import State
 from diagnostic_msgs.msg import DiagnosticStatus, KeyValue
 from sensor_msgs.msg import Imu
 from geometry_msgs.msg import Vector3Stamped, QuaternionStamped
@@ -222,17 +223,16 @@ class Vmu931Node(Node):
             return 0
         
         # Publishers
-#        self._state_publisher = self.create_publisher(VmuState, "~state", 10)
-        self._imu_publisher = self.create_publisher(Imu, 'data_raw', 10)
-        self._gyro_publisher = self.create_publisher(Vector3Stamped, 'gyro', 10)
-        self._euler_publisher = self.create_publisher(Vector3Stamped, 'euler', 10)
-        self._accel_publisher = self.create_publisher(Vector3Stamped, 'accelerometer', 10)
-        self._magnet_publisher = self.create_publisher(Vector3Stamped, 'magnetometer', 10)
-        self._quaternion_publisher = self.create_publisher(QuaternionStamped, 'quaternion', 10)
-        self._heading_publisher = self.create_publisher(Vector3Stamped, 'heading', 10)
+        self._imu_publisher = self.create_publisher(Imu, '/vmu/data_raw', 10)
+        self._gyro_publisher = self.create_publisher(Vector3Stamped, '/vmu/gyro', 10)
+        self._euler_publisher = self.create_publisher(Vector3Stamped, '/vmu/euler', 10)
+        self._accel_publisher = self.create_publisher(Vector3Stamped, '/vmu/accelerometer', 10)
+        self._magnet_publisher = self.create_publisher(Vector3Stamped, '/vmu/magnetometer', 10)
+        self._quaternion_publisher = self.create_publisher(QuaternionStamped, '/vmu/quaternion', 10)
+        self._heading_publisher = self.create_publisher(Vector3Stamped, '/vmu/heading', 10)
 
         # Service Servers
-        self.service_server = self.create_service(Trigger, 'calibrate', self.calibrationServiceCb)
+        self.service_server = self.create_service(Trigger, '/vmu/calibrate', self.calibrationServiceCb)
         
         # Subscribers
         # topic_name, msg type, callback, queue_size
