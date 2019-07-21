@@ -62,7 +62,7 @@ class Vmu931Node(Node):
     
     def __init__(self):
         
-        super().__init__('vmu931_imu')
+        super().__init__('vmu931_imu',namespace='vmu')
 
         self.node_name = self.get_name() #.replace('/','')
 
@@ -223,16 +223,17 @@ class Vmu931Node(Node):
             return 0
         
         # Publishers
-        self._imu_publisher = self.create_publisher(Imu, '/vmu/data_raw', 10)
-        self._gyro_publisher = self.create_publisher(Vector3Stamped, '/vmu/gyro', 10)
-        self._euler_publisher = self.create_publisher(Vector3Stamped, '/vmu/euler', 10)
-        self._accel_publisher = self.create_publisher(Vector3Stamped, '/vmu/accelerometer', 10)
-        self._magnet_publisher = self.create_publisher(Vector3Stamped, '/vmu/magnetometer', 10)
-        self._quaternion_publisher = self.create_publisher(QuaternionStamped, '/vmu/quaternion', 10)
-        self._heading_publisher = self.create_publisher(Vector3Stamped, '/vmu/heading', 10)
+        
+        self._imu_publisher = self.create_publisher(Imu, 'data_raw', 10)
+        self._gyro_publisher = self.create_publisher(Vector3Stamped, 'gyro', 10)
+        self._euler_publisher = self.create_publisher(Vector3Stamped, 'euler', 10)
+        self._accel_publisher = self.create_publisher(Vector3Stamped, 'accelerometer', 10)
+        self._magnet_publisher = self.create_publisher(Vector3Stamped, 'magnetometer', 10)
+        self._quaternion_publisher = self.create_publisher(QuaternionStamped, 'quaternion', 10)
+        self._heading_publisher = self.create_publisher(Vector3Stamped, 'heading', 10)
 
         # Service Servers
-        self.service_server = self.create_service(Trigger, '/vmu/calibrate', self.calibrationServiceCb)
+        self.service_server = self.create_service(Trigger, 'calibrate', self.calibrationServiceCb)
         
         # Subscribers
         # topic_name, msg type, callback, queue_size
